@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memory-Mirror</title>
+  <meta name="description" content="A cognitive support tool for people with memory impairments using real-time face recognition to provide memory prompts.">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+  
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js" onerror="this.src='https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js'"></script>
+</head>
+<body>
+
+  <div id="video-container">
+    <video id="webcam" playsinline autoplay muted></video>
+    <canvas id="overlay-canvas"></canvas>
+    <div class="vignette"></div>
+  </div>
+
+  <div id="ui-layer"></div>
+  
+  <div id="drop-zone" style="display: none;">
+    <div class="drop-content">
+      <span style="font-size: 64px;">📸</span>
+      <h2>Drop a photo here to identify</h2>
+    </div>
+  </div>
+
+  <div id="panel-overlay" onclick="closeSidePanel()"></div>
+
+  <div id="scan-progress" style="display:none;">
+    <div class="scan-ring-wrapper">
+      <svg class="scan-ring-svg" viewBox="0 0 64 64" aria-hidden="true">
+        <circle class="scan-ring-track" cx="32" cy="32" r="28"/>
+        <circle class="scan-ring-fill" id="scan-ring-circle" cx="32" cy="32" r="28"/>
+      </svg>
+      <span id="scan-count-text">0<small>/5</small></span>
+    </div>
+    <p class="scan-label">Scanning&hellip;</p>
+  </div>
+
+  <div id="analysis-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <button class="close-btn" onclick="closeAnalysisModal()">&times;</button>
+      <div id="analysis-body"></div>
+    </div>
+  </div>
+
+  <div id="top-bar">
+    <div class="brand-pill">
+      <div class="status-dot" id="camera-status-dot" style="background-color: #e3b341; box-shadow: 0 0 10px #e3b341;"></div>
+      <h1 class="brand">Memory Mirror</h1>
+    </div>
+
+    <div class="controls">
+      <button id="theme-toggle" class="icon-button" aria-label="Toggle theme" onclick="toggleTheme()">☀️</button>
+      <button class="btn-manage" aria-label="Manage memories" onclick="manageMemories()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        Manage
+      </button>
+    </div>
+  </div>
+
+  <div id="status-pill-container">
+    <div class="status-pill">
+      <div class="spinner" id="status-spinner"></div>
+      <span id="persistent-status">Looking for familiar faces...</span>
+    </div>
+  </div>
+
+  <div id="side-panel" role="dialog" aria-modal="true" aria-labelledby="panel-title">
+    <div class="panel-header">
+      <h2 id="panel-title">Add to Memory</h2>
+      <button class="close-btn" aria-label="Close panel" onclick="closeSidePanel()">&times;</button>
+    </div>
+    
+    <div id="enrollment-form-container">
+      <input type="hidden" id="enroll-id" value="">
+      
+      <div class="form-group" id="rescan-group" style="display:none; margin-bottom: 24px;">
+        <button class="btn-outline" onclick="startReTrain()" style="width:100%; border-color:var(--accent-color); color:var(--accent-color); padding: 12px;">+ Re-scan Face to Improve Recognition</button>
+        <small style="color:var(--text-muted); display:block; margin-top:8px;">Look at the camera to add more face samples to this profile.</small>
+      </div>
+
+      <div class="form-group" id="photo-upload-group">
+        <label for="enroll-photo">Enroll via Photo (Optional)</label>
+        <input type="file" id="enroll-photo" accept="image/*" onchange="handlePhotoUpload(event)" style="padding: 8px;">
+        <div id="photo-preview-container" style="display:none; margin-top:10px; position:relative;">
+           <img id="photo-preview" style="width:100%; max-height:200px; object-fit:cover; border-radius:8px; display:block;">
+           <div id="photo-status" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.7); padding:5px 10px; border-radius:5px; color:white; font-size: 14px;">Analyzing...</div>
+        </div>
+        <small style="color: var(--text-muted); display: block; margin-top: 5px;">Uploading a clear photo overrides live camera scanning.</small>
+      </div>
+
+      <div class="form-group">
+        <label for="enroll-name">Name</label>
+        <input type="text" id="enroll-name" placeholder="E.g. Sarah" required>
+      </div>
+      <div class="form-group">
+        <label for="enroll-relationship">Relationship</label>
+        <select id="enroll-relationship" onchange="handleRelationshipChange()">
+          <option value="Family">Family</option>
+          <option value="Friend">Friend</option>
+          <option value="Caregiver">Caregiver</option>
+          <option value="Doctor">Doctor</option>
+          <option value="Other">Other</option>
+          <option value="custom">+ Add Custom...</option>
+        </select>
+        <input type="text" id="enroll-relationship-custom" placeholder="Type custom relationship..." style="display: none; margin-top: 10px;">
+      </div>
+      <div class="form-group">
+        <label for="enroll-prompt">Memory Prompt</label>
+        <textarea id="enroll-prompt" placeholder="A brief reminder sentence... e.g. Sarah loves gardening and always brings flowers."></textarea>
+      </div>
+      <div class="form-group">
+        <label for="enroll-note">Last Interaction Note</label>
+        <input type="text" id="enroll-note" placeholder="E.g. Visited last Tuesday, had tea">
+      </div>
+      <button class="btn-primary" onclick="saveEnrollment()">Save to Memory</button>
+    </div>
+
+    <div id="management-list-container" style="display: none;">
+      <div class="management-controls">
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+          <button class="btn-primary" style="margin:0; flex: 1;" onclick="openManualEnrollment()">+ Add Person</button>
+          <button class="btn-icon" style="margin:0; width: 54px; height: 54px; flex-shrink: 0;" title="Batch Upload Photos" onclick="document.getElementById('batch-upload').click()">📸</button>
+          <input type="file" id="batch-upload" multiple accept="image/*" style="display: none;" onchange="handleBatchUpload(event)">
+        </div>
+        <div class="search-box" style="position: relative;">
+          <span style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 16px; opacity: 0.5;">🔍</span>
+          <input type="text" id="memory-search" placeholder="Search memories..." oninput="renderMemoryList()" style="padding-left: 44px;">
+        </div>
+      </div>
+      <div style="overflow-y: auto; padding: 15px 32px 32px 32px; flex-grow: 1; min-height: 0;">
+        <div id="memory-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
