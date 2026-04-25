@@ -98,6 +98,11 @@
         <small style="color:var(--text-muted); display:block; margin-top:8px;">Look at the camera to add more face samples to this profile.</small>
       </div>
 
+      <div class="form-group" id="scan-face-group" style="display:none; margin-bottom: 24px;">
+        <button class="btn-outline" onclick="startEnrollment()" ontouchend="startEnrollment(); event.preventDefault();" style="width:100%; border-color:var(--accent-color); color:var(--accent-color); padding: 12px;">📷 Scan Face with Camera</button>
+        <small style="color:var(--text-muted); display:block; margin-top:8px;">Stand in front of the camera. Captures 5 frames automatically, then come back to fill in the details.</small>
+      </div>
+
       <div class="form-group" id="photo-upload-group">
         <label id="photo-upload-label" for="enroll-photo">Enroll via Photo (Optional)</label>
         <input type="file" id="enroll-photo" accept="image/*" onchange="handlePhotoUpload(event)" style="padding: 8px;">
