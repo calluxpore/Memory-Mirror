@@ -1,3 +1,5 @@
+## Live demo: https://calluxpore.github.io/Memory-Mirror/
+
 # Memory Mirror
 
 Memory Mirror is a cognitive support tool for people living with memory impairments or face blindness. Point a webcam at the room and the app quietly identifies the people in front of you — floating a soft card beside each face with their name, your relationship to them, a personal note you wrote, and the last time you saw them. Everything runs locally in the browser. Nothing leaves the device.
