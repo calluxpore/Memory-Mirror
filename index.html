@@ -18,6 +18,7 @@
 
   <div id="video-container">
     <video id="webcam" playsinline autoplay muted></video>
+    <canvas id="pointillism-canvas"></canvas>
     <canvas id="overlay-canvas"></canvas>
     <div class="vignette"></div>
   </div>
@@ -31,7 +32,7 @@
     </div>
   </div>
 
-  <div id="panel-overlay" onclick="closeSidePanel()"></div>
+  <div id="panel-overlay" onclick="closeSidePanel()" ontouchend="closeSidePanel(); event.preventDefault();"></div>
 
   <div id="scan-progress" style="display:none;">
     <div class="scan-ring-wrapper">
@@ -46,7 +47,7 @@
 
   <div id="analysis-modal" class="modal" style="display: none;">
     <div class="modal-content">
-      <button class="close-btn" onclick="closeAnalysisModal()">&times;</button>
+      <button class="close-btn" onclick="closeAnalysisModal()" ontouchend="closeAnalysisModal(); event.preventDefault();">&times;</button>
       <div id="analysis-body"></div>
     </div>
   </div>
@@ -55,35 +56,41 @@
     <div class="brand-pill">
       <div class="status-dot" id="camera-status-dot" style="background-color: #e3b341; box-shadow: 0 0 10px #e3b341;"></div>
       <h1 class="brand">Memory Mirror</h1>
+      <div style="width: 1px; height: 16px; background: var(--input-border); margin: 0 4px;"></div>
+      <label class="detection-switch" title="Toggle Face Detection">
+        <input type="checkbox" id="detection-toggle" checked onchange="toggleDetection()">
+        <span class="detection-slider"></span>
+      </label>
     </div>
 
     <div class="controls">
-      <button id="theme-toggle" class="icon-button" aria-label="Toggle theme" onclick="toggleTheme()">☀️</button>
-      <button class="btn-manage" aria-label="Manage memories" onclick="manageMemories()">
+      <button id="theme-toggle" class="icon-button" aria-label="Toggle theme" onclick="toggleTheme()" ontouchend="toggleTheme(); event.preventDefault();">☀️</button>
+      <button class="btn-manage" aria-label="Manage memories" onclick="manageMemories()" ontouchend="manageMemories(); event.preventDefault();">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
         Manage
       </button>
     </div>
   </div>
 
-  <div id="status-pill-container">
-    <div class="status-pill">
-      <div class="spinner" id="status-spinner"></div>
-      <span id="persistent-status">Looking for familiar faces...</span>
-    </div>
+  <button id="pointillism-btn" class="icon-button" style="position: absolute; bottom: 24px; left: 32px; z-index: 20; width: 160px; height: 44px; padding: 0; font-size: 14px; border-radius: 30px; font-weight: 600;" onclick="togglePointillism()" ontouchend="togglePointillism(); event.preventDefault();">
+    Face Blind Mode
+  </button>
+
+  <div id="pointillism-slider-container" style="position: absolute; bottom: 80px; left: 32px; z-index: 20; display: none; background: var(--panel-bg); padding: 12px 16px; border-radius: 30px; border: 1px solid var(--input-border); backdrop-filter: blur(15px); width: 160px; box-sizing: border-box; text-align: center;">
+    <input type="range" id="pointillism-slider" min="10" max="60" value="30" step="1" oninput="updatePointillismSlider(this.value)" style="width: 100%; cursor: pointer; display: block; margin: 0;">
   </div>
 
   <div id="side-panel" role="dialog" aria-modal="true" aria-labelledby="panel-title">
     <div class="panel-header">
       <h2 id="panel-title">Add to Memory</h2>
-      <button class="close-btn" aria-label="Close panel" onclick="closeSidePanel()">&times;</button>
+      <button class="close-btn" aria-label="Close panel" onclick="closeSidePanel()" ontouchend="closeSidePanel(); event.preventDefault();">&times;</button>
     </div>
     
     <div id="enrollment-form-container">
       <input type="hidden" id="enroll-id" value="">
       
       <div class="form-group" id="rescan-group" style="display:none; margin-bottom: 24px;">
-        <button class="btn-outline" onclick="startReTrain()" style="width:100%; border-color:var(--accent-color); color:var(--accent-color); padding: 12px;">+ Re-scan Face to Improve Recognition</button>
+        <button class="btn-outline" onclick="startReTrain()" ontouchend="startReTrain(); event.preventDefault();" style="width:100%; border-color:var(--accent-color); color:var(--accent-color); padding: 12px;">+ Re-scan Face to Improve Recognition</button>
         <small style="color:var(--text-muted); display:block; margin-top:8px;">Look at the camera to add more face samples to this profile.</small>
       </div>
 
@@ -121,19 +128,26 @@
         <label for="enroll-note">Last Interaction Note</label>
         <input type="text" id="enroll-note" placeholder="E.g. Visited last Tuesday, had tea">
       </div>
-      <button class="btn-primary" onclick="saveEnrollment()">Save to Memory</button>
+      <button class="btn-primary" onclick="saveEnrollment()" ontouchend="saveEnrollment(); event.preventDefault();">Save to Memory</button>
     </div>
 
     <div id="management-list-container" style="display: none;">
       <div class="management-controls">
         <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-          <button class="btn-primary" style="margin:0; flex: 1;" onclick="openManualEnrollment()">+ Add Person</button>
-          <button class="btn-icon" style="margin:0; width: 54px; height: 54px; flex-shrink: 0;" title="Batch Upload Photos" onclick="document.getElementById('batch-upload').click()">📸</button>
+          <button class="btn-primary" style="margin:0; flex: 1;" onclick="openManualEnrollment()" ontouchend="openManualEnrollment(); event.preventDefault();">+ Add Person</button>
+          <button class="btn-icon" style="margin:0; width: 54px; height: 54px; flex-shrink: 0;" title="Batch Upload Photos" onclick="document.getElementById('batch-upload').click()" ontouchend="document.getElementById('batch-upload').click(); event.preventDefault();">📸</button>
           <input type="file" id="batch-upload" multiple accept="image/*" style="display: none;" onchange="handleBatchUpload(event)">
         </div>
         <div class="search-box" style="position: relative;">
           <span style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 16px; opacity: 0.5;">🔍</span>
           <input type="text" id="memory-search" placeholder="Search memories..." oninput="renderMemoryList()" style="padding-left: 44px;">
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 12px;">
+          <button class="btn-outline" style="margin:0; flex:1; font-size:13px;" onclick="exportMemories()" title="Export all memories to a JSON backup file">⬆ Export</button>
+          <label class="btn-outline" style="margin:0; flex:1; font-size:13px; cursor:pointer; text-align:center; display:flex; align-items:center; justify-content:center; gap:6px;" title="Import memories from a JSON backup file">
+            ⬇ Import
+            <input type="file" id="import-file" accept=".json" style="display:none;" onchange="handleImportFile(event)">
+          </label>
         </div>
       </div>
       <div style="overflow-y: auto; padding: 15px 24px 24px 24px; flex-grow: 1; min-height: 0;">

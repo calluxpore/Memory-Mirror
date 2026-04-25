@@ -1,6 +1,7 @@
 let memoryDB = [];
 let faceMatcher = null;
 let isDetecting = false;
+window.isDetectionEnabled = true;
 let isEnrollmentMode = false;
 let enrollmentSamples = [];
 let capturedAvatar = null;
@@ -62,10 +63,7 @@ function toggleTheme() {
 }
 
 function updatePersistentStatus(msg, spinning = false) {
-  const el = document.getElementById('persistent-status');
-  const pill = document.querySelector('.status-pill');
-  if (el) el.innerText = msg;
-  if (pill) pill.classList.toggle('idle', !spinning);
+  // Removed per user request
 }
 
 function loadDB() {
@@ -190,6 +188,14 @@ function resizeVideo() {
   canvas.height = video.clientHeight;
   canvas.style.width = video.style.width;
   canvas.style.height = video.style.height;
+
+  const pCanvas = document.getElementById('pointillism-canvas');
+  if (pCanvas) {
+    pCanvas.width = video.clientWidth;
+    pCanvas.height = video.clientHeight;
+    pCanvas.style.width = video.style.width;
+    pCanvas.style.height = video.style.height;
+  }
 }
 
 function getFaceCrop(box, sourceEl) {
@@ -217,6 +223,15 @@ function getFaceCrop(box, sourceEl) {
 async function detectLoop() {
   if (!isDetecting || !video || video.paused || video.ended) return;
 
+  if (!window.isDetectionEnabled) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    usedKeys.clear();
+    cleanupUI();
+    setTimeout(detectLoop, 600);
+    return;
+  }
+
   try {
     const detections = await faceapi.detectAllFaces(video, new faceapi.SsdMobilenetv1Options())
                                     .withFaceLandmarks()
@@ -242,9 +257,6 @@ async function detectLoop() {
            capturedAvatar = getFaceCrop(det.detection.box, video);
         }
 
-        // Hide status pill — scan ring takes its place
-        document.getElementById('status-pill-container').classList.add('scan-active');
-
         // Update scan progress ring
         const scanCount = enrollmentSamples.length;
         const scanProgressEl = document.getElementById('scan-progress');
@@ -260,7 +272,6 @@ async function detectLoop() {
         if (enrollmentSamples.length >= 5) {
           isEnrollmentMode = false;
           document.getElementById('scan-progress').style.display = 'none';
-          document.getElementById('status-pill-container').classList.remove('scan-active');
           updatePersistentStatus("Scan complete. Please fill in details.");
 
           if (!document.getElementById('side-panel').classList.contains('open')) {
@@ -272,7 +283,6 @@ async function detectLoop() {
       }
     } else {
       document.getElementById('scan-progress').style.display = 'none';
-      document.getElementById('status-pill-container').classList.remove('scan-active');
       let recognizedNames = [];
 
       resizedDetections.forEach((det, index) => {
@@ -483,7 +493,7 @@ function updateUnknownCard(faceCX, faceCY, box, index) {
     el.className = 'memory-card unknown-card visible';
     el.innerHTML = `
       <h2>Unknown Person</h2>
-      <button onclick="openManualEnrollment()" style=";">Add to Memory</button>
+      <button onclick="openManualEnrollment()" ontouchend="openManualEnrollment(); event.preventDefault();" style=";">Add to Memory</button>
     `;
     uiLayer.appendChild(el);
     card = { el, width: 260, height: 160 };
@@ -709,7 +719,6 @@ window.closeSidePanel = function() {
   document.getElementById('side-panel').classList.remove('open');
   document.getElementById('panel-overlay').classList.remove('visible');
   document.getElementById('scan-progress').style.display = 'none';
-  document.getElementById('status-pill-container').classList.remove('scan-active');
   isEnrollmentMode = false;
   enrollmentSamples = [];
   capturedAvatar = null;
@@ -1187,3 +1196,250 @@ window.processReviewQueue = function() {
        manageMemories();
    }
 }
+
+// ── Pointillism Effect ──
+let isPointillismActive = false;
+const Pointillism = {
+  gridSize: 20,
+  sliderValue: 30,
+  colors: ["#9b2226", "#ae2012", "#bb3e03", "#ca6702", "#ee9b00", "#eeb300", "#e9d8a6", "#94d2bd", "#0a9396", "#005f73"],
+  circles: [],
+  offscreenCanvas: document.createElement('canvas'),
+  offscreenCtx: null,
+
+  init(w, h) {
+    this.circles = [];
+    for (let y = 0; y < h; y += this.gridSize) {
+      let row = [];
+      for (let x = 0; x < w; x += this.gridSize) {
+        row.push(this.colors[Math.floor(Math.random() * this.colors.length)]);
+      }
+      this.circles.push(row);
+    }
+  },
+
+  draw() {
+    if (!isPointillismActive) return;
+    const pCanvas = document.getElementById('pointillism-canvas');
+    if (!pCanvas || !video.videoWidth) {
+      requestAnimationFrame(() => this.draw());
+      return;
+    }
+    const ctx = pCanvas.getContext('2d');
+    const w = pCanvas.width;
+    const h = pCanvas.height;
+
+    if (w === 0 || h === 0) {
+      requestAnimationFrame(() => this.draw());
+      return;
+    }
+
+    if (!this.circles.length || this.circles.length !== Math.ceil(h / this.gridSize)) {
+      this.init(w, h);
+    }
+
+    if (!this.offscreenCtx) {
+      this.offscreenCtx = this.offscreenCanvas.getContext('2d', { willReadFrequently: true });
+    }
+
+    if (this.offscreenCanvas.width !== w) {
+      this.offscreenCanvas.width = w;
+      this.offscreenCanvas.height = h;
+    }
+
+    this.offscreenCtx.drawImage(video, 0, 0, w, h);
+    const pixels = this.offscreenCtx.getImageData(0, 0, w, h).data;
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    ctx.fillRect(0, 0, w, h);
+
+    for (let i = 0; i < this.circles.length; i++) {
+      for (let j = 0; j < this.circles[i].length; j++) {
+        let x = j * this.gridSize;
+        let y = i * this.gridSize;
+        if (y >= h || x >= w) continue;
+
+        let index = (y * w + x) * 4;
+        let r = pixels[index];
+        let dia = this.sliderValue + (2 - this.sliderValue) * (r / 255);
+
+        let px = x + this.gridSize / 2;
+        let py = y + this.gridSize / 2;
+        let c = this.circles[i][j];
+
+        ctx.beginPath();
+        ctx.arc(px, py, dia / 2, 0, Math.PI * 2);
+        if (dia > 15) {
+          ctx.fillStyle = c;
+          ctx.fill();
+        } else {
+          ctx.strokeStyle = c;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
+    }
+
+    if (this.circles.length > 0 && this.circles[0].length > 0) {
+       let randomRow = Math.floor(Math.random() * this.circles.length);
+       let randomCol = Math.floor(Math.random() * this.circles[0].length);
+       this.circles[randomRow][randomCol] = this.colors[Math.floor(Math.random() * this.colors.length)];
+    }
+
+    requestAnimationFrame(() => this.draw());
+  }
+};
+
+window.togglePointillism = function() {
+  isPointillismActive = !isPointillismActive;
+  const btn = document.getElementById('pointillism-btn');
+  const pCanvas = document.getElementById('pointillism-canvas');
+  const sliderContainer = document.getElementById('pointillism-slider-container');
+  
+  if (isPointillismActive) {
+    btn.style.background = 'var(--accent-color)';
+    btn.style.color = '#fff';
+    pCanvas.style.display = 'block';
+    pCanvas.style.backgroundColor = 'black';
+    if (sliderContainer) sliderContainer.style.display = 'block';
+    Pointillism.draw();
+  } else {
+    btn.style.background = 'var(--card-bg)';
+    btn.style.color = 'var(--text-color)';
+    pCanvas.style.display = 'none';
+    pCanvas.style.backgroundColor = 'transparent';
+    if (sliderContainer) sliderContainer.style.display = 'none';
+    const ctx = pCanvas.getContext('2d');
+    ctx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+  }
+}
+
+window.updatePointillismSlider = function(val) {
+  Pointillism.sliderValue = parseInt(val, 10);
+}
+
+window.toggleDetection = function() {
+  const toggle = document.getElementById('detection-toggle');
+  window.isDetectionEnabled = toggle.checked;
+  const dot = document.getElementById('camera-status-dot');
+  if (window.isDetectionEnabled) {
+    updatePersistentStatus("Looking for familiar faces...");
+    dot.style.backgroundColor = '#2ea043';
+    dot.style.boxShadow = '0 0 10px #2ea043';
+  } else {
+    updatePersistentStatus("Face Detection Paused");
+    dot.style.backgroundColor = '#ff4757';
+    dot.style.boxShadow = 'none';
+  }
+}
+
+window.exportMemories = function() {
+  if (memoryDB.length === 0) {
+    showToast("No memories to export.", 'info');
+    return;
+  }
+  const toExport = memoryDB.map(person => ({
+    ...person,
+    faceDescriptors: person.faceDescriptors ? person.faceDescriptors.map(desc => Array.from(desc)) : []
+  }));
+  const exportData = {
+    version: "1.0",
+    exportedAt: new Date().toISOString(),
+    count: toExport.length,
+    people: toExport
+  };
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `memory-mirror-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`Exported ${toExport.length} ${toExport.length === 1 ? 'memory' : 'memories'}.`, 'success');
+}
+
+window.handleImportFile = async function(event) {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+
+  let people = [];
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if (Array.isArray(data)) {
+      people = data;
+    } else if (data.people && Array.isArray(data.people)) {
+      people = data.people;
+    } else {
+      showToast("Invalid backup file format.", 'error');
+      return;
+    }
+  } catch (e) {
+    showToast("Failed to read backup file.", 'error');
+    console.error(e);
+    return;
+  }
+
+  if (people.length === 0) {
+    showToast("No people found in backup file.", 'error');
+    return;
+  }
+
+  const existingNames = new Set(memoryDB.map(p => p.name.toLowerCase()));
+  const newPeople = people.filter(p => p.name && !existingNames.has(p.name.toLowerCase()));
+  const duplicates = people.filter(p => p.name && existingNames.has(p.name.toLowerCase()));
+
+  window._pendingImportData = people;
+
+  const modal = document.getElementById('analysis-modal');
+  const body = document.getElementById('analysis-body');
+  modal.style.display = 'flex';
+  body.innerHTML = `
+    <div style="font-size:52px; margin-bottom:16px; line-height:1;">📥</div>
+    <h3 style="font-size:24px; margin:0 0 12px 0; color:var(--text-color);">Import ${people.length} ${people.length === 1 ? 'Memory' : 'Memories'}</h3>
+    <div style="background:var(--input-bg); border:1px solid var(--input-border); border-radius:12px; padding:16px; margin-bottom:24px; text-align:left; line-height:1.8;">
+      <p style="margin:0;">✅ <strong>${newPeople.length}</strong> new ${newPeople.length === 1 ? 'person' : 'people'} to add</p>
+      ${duplicates.length > 0 ? `<p style="margin:0; color:var(--text-muted);">⚠️ <strong>${duplicates.length}</strong> already exist (skipped when merging)</p>` : ''}
+    </div>
+    <button class="btn-primary" style="margin-bottom:12px;" onclick="confirmImport('merge')">Merge — Add New Only</button>
+    <button class="btn-outline" style="width:100%; margin-bottom:12px; border-color:#ef4444; color:#ef4444;" onclick="confirmImport('replace')">Replace — Overwrite All Memories</button>
+    <button class="btn-outline" style="width:100%;" onclick="closeAnalysisModal()">Cancel</button>
+  `;
+}
+
+window.confirmImport = function(mode) {
+  const people = window._pendingImportData;
+  if (!people) return;
+
+  if (mode === 'replace') {
+    memoryDB = [];
+  }
+
+  const existingNames = new Set(memoryDB.map(p => p.name.toLowerCase()));
+  let addedCount = 0;
+
+  people.forEach(person => {
+    if (!person.name) return;
+    if (mode === 'replace' || !existingNames.has(person.name.toLowerCase())) {
+      memoryDB.push({
+        ...person,
+        id: crypto.randomUUID(),
+        faceDescriptors: person.faceDescriptors ? person.faceDescriptors.map(desc => new Float32Array(desc)) : []
+      });
+      existingNames.add(person.name.toLowerCase());
+      addedCount++;
+    }
+  });
+
+  saveDB();
+  updateFaceMatcher();
+  window._pendingImportData = null;
+  closeAnalysisModal();
+  renderMemoryList();
+  showToast(`Imported ${addedCount} ${addedCount === 1 ? 'memory' : 'memories'} successfully!`, 'success');
+}
+
+
