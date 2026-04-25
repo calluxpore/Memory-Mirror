@@ -298,6 +298,14 @@ async function detectLoop() {
           recognizedNames.push(match.name);
           updateMemoryCard(match, faceCX, faceCY, det.detection.box, distance);
           logInteraction(match.id);
+          if (!match.avatar) {
+              match.avatar = getFaceCrop(det.detection.box, video);
+              saveDB();
+              if (document.getElementById('side-panel').classList.contains('open') && 
+                  document.getElementById('management-list-container').style.display !== 'none') {
+                  renderMemoryList();
+              }
+          }
         } else {
           updateUnknownCard(faceCX, faceCY, det.detection.box, index);
         }
@@ -526,6 +534,7 @@ window.startEnrollment = function() {
 window.startReTrain = function() {
   isEnrollmentMode = true;
   enrollmentSamples = [];
+  capturedAvatar = null;
   updatePersistentStatus("Re-scanning face... Look at the camera.");
 }
 
