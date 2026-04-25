@@ -1,64 +1,51 @@
-# Memory-Mirror
+# Memory Mirror
 
-Memory-Mirror is a private, completely local, and modular web application designed as a cognitive support tool. Using real-time facial recognition, it helps individuals with memory impairments or prosopagnosia (face blindness) identify people in their environment. The app overlays gentle, highly-translucent floating cards next to recognized faces, providing their name, relationship, a personalized memory prompt, and when they were last seen.
+Memory Mirror is a cognitive support tool for people living with memory impairments or face blindness. Point a webcam at the room and the app quietly identifies the people in front of you — floating a soft card beside each face with their name, your relationship to them, a personal note you wrote, and the last time you saw them. Everything runs locally in the browser. Nothing leaves the device.
 
-## 🌟 Key Features
+---
 
-* **Real-Time Facial Recognition**: Utilizes `face-api.js` to detect and match faces seamlessly directly in your browser.
-* **Privacy First (100% Local)**: All facial data, metadata, and logic are processed locally on the device and securely stored in the browser's `localStorage`. No data is ever sent to a remote server.
-* **Accessible Design**: Features both a beautiful Dark Mode and a clean Light Mode, easily switchable via an intuitive icon toggle in the header.
-* **Dynamic Memory Management**: 
-  * Add people via live webcam scan (5-frame capture) or **bypass the camera entirely by uploading a clear photo**.
-  * Complete editing capabilities. Change notes, memory prompts, and names seamlessly on the fly.
-  * *Smart Relationships*: Type in custom relationships (e.g. "Colleague" or "Mailman"). The system learns them and permanently adds them to your dropdown for future use.
-* **Intelligent Workflows**: 
-  * *Drag & Drop Analysis*: Drag any photo onto the browser window. The system instantly analyzes it and tells you who it is, or provides a 1-click flow to add them to your memories.
-  * *Batch Processing & Automated Queue*: Select multiple photos at once in the side panel. The AI mathematically groups unknown faces across the photos and drops you into a streamlined queue asking you to name them sequentially without tedious clicking.
-* **High-Performance UI**: A scalable, compact management side-panel featuring instant search/filtering, alphabetical sorting, sticky headers, and space-saving icon-based actions.
+## What it does
 
-## ✨ UI/UX Improvements
+**Live recognition.** The camera runs continuously. When a known face enters the frame, a translucent card appears beside it — no tapping, no searching. The card fades away when the person leaves.
 
-* **Premium "Pill" UI**: A modernized, de-cluttered interface featuring a compact "Brand Pill" for the title and live indicator, and an animated "Status Pill" that smoothly slides up from the bottom-center to communicate system states without obscuring the camera view.
-* **Cognitive-First Memory Cards**: Re-engineered the floating memory cards based on cognitive support best practices. The person's name is rendered as the most prominent element, directly followed by their relationship and memory prompt, entirely removing redundant avatars to maintain a perfectly clean interface.
-* **Vibrant Orange Theme**: A meticulously crafted high-contrast orange theme (`#e67e22`) designed to be accessible, warm, and visually striking in both Light and Dark modes.
-* **Refined Typography & Spacing**: The management side panel features elegant, scaled-down typography, seamlessly aligned sticky headers, and custom-styled native form elements (like custom chevron dropdowns and theme-matched text selection) for a truly native application feel.
-* **Toast Notifications**: System feedback uses a polished slide-in toast system. Replaces all jarring browser `alert()` dialogs.
-* **Custom Modals**: Deleting a memory or reviewing faces opens a beautiful in-app modal, replacing the plain browser `confirm()` dialogs.
-* **Face Scan Progress Ring**: An animated SVG ring appears during live face enrollment, smoothly filling as each of the 5 required samples is captured.
-* **Better Empty States**: The memory list shows a contextual illustration and message — 🧠 "No memories saved yet" on first launch, and 🔍 "No results found" when a search has no matches.
+**Memory prompts.** Each person has a short note attached: a reminder of something important about them, a recent conversation, or anything that helps orient you in the moment. A speaker button reads the note aloud.
 
-## 🛠 Tech Stack
+**Face Blind Mode.** A toggle replaces the camera feed with a painterly pointillist effect — faces become impressionistic colour patterns rather than identifiable images. Useful for carers or family members setting up the app without the user feeling watched.
 
-* **HTML5 / Vanilla CSS3 / Vanilla JavaScript**: Clean, framework-free modular architecture.
-* **face-api.js**: For underlying tensor operations and facial feature extraction models.
-* **CSS Variables**: Enabling seamless, instant theme switching and frosted glass UI elements.
+**Memory management.** A slide-in panel lets you add, edit, and remove people. You can enroll someone by letting the camera scan them live, uploading a photo, or dropping a photo directly onto the page. A batch mode accepts multiple photos at once, groups faces it finds across them, and walks you through naming each one in a queue.
 
-## 📁 File Structure
+**Export and import.** The full database — face data, photos, names, notes — exports as a single file. Import it on another device to pick up exactly where you left off. Merge with existing data or replace it entirely.
 
-* `index.html` - Core markup, semantic tags, and UI layout.
-* `style.css` - Extensive styling rules, frosted glassmorphism cards, light/dark themes, custom scrollbars, and animations.
-* `app.js` - Logic handling webcam feeds, face detection loops, DB operations, photo uploads, and dynamic UI interactions.
+---
 
-## 🚀 Setup & Usage
+## Design
 
-Because the app requires secure contexts to access the webcam (`getUserMedia`) and fetch operations to load AI models via CDN, opening the HTML directly via `file://` protocol will be blocked by most modern browsers. **You must serve it via a local web server.**
+The interface is built around one principle: when you need it, it should already be there.
 
-### Quick Start
-1. Open a terminal in the project directory.
-2. Run a local development server. For example, using Python:
-   ```bash
-   python -m http.server 8000
-   ```
-   Or using Node.js:
-   ```bash
-   npx serve .
-   ```
-3. Open your browser and navigate to `http://localhost:8000` (or whichever port your server specifies).
-4. Grant the browser permission to access your camera when prompted.
+The camera view fills the entire screen with nothing in the way. Controls live in a frosted pill in the top corners and disappear visually into the background when not needed. Memory cards are positioned dynamically beside each detected face, connected by a faint dashed line, and sized to keep the name large and the note readable at a distance.
 
-## 📝 How to Use
+The colour system is warm orange on near-black — high contrast, low aggression. A full light mode is available for bright rooms. The theme switch is a single tap.
 
-1. **Initial View**: Sit in front of the camera. The app will detect faces and box them in a soft glow. 
-2. **Adding People**: Click the "Manage Memories" button on the top right, then click **"+ Add New Person"**. You can either wait for the camera to scan the person in view, or simply upload a portrait photo of them. Fill out their details and click Save.
-3. **Recognizing**: Once a saved person enters the frame, their face bounding box will turn green, and a floating memory card will smoothly follow their movements, displaying your notes.
-4. **Managing**: Use the side panel to instantly search through hundreds of memories, edit profiles, or safely delete outdated ones.
+The side panel slides in from the right. Forms adapt their language to context: the photo field says "Enroll via Photo" when adding someone new and "Update Photo" when editing an existing profile. Opening the add or edit form from the list shows a back button so you never have to close the panel to get back. Toasts slide in from the right edge and automatically shift left when the panel is open so they never cover it.
+
+Every button, input, and card follows a consistent radius scale: 10px for form controls and action buttons, 30px for floating pill-shaped buttons, full circles for icon buttons. Hover states on subtle buttons stay subtle — the accent glow is reserved for primary actions only.
+
+---
+
+## How to use
+
+1. Open the app and allow camera access.
+2. Sit in front of the camera. Any face the app doesn't know shows an "Unknown Person" card with an option to add them.
+3. Click **Manage** in the top right to open the memory panel.
+4. Click **+ Add Person** — either let the camera capture the person in frame (it collects 5 samples automatically) or upload a photo. Fill in their name, relationship, and a memory prompt, then save.
+5. Recognized faces now display their card automatically whenever they appear on camera.
+6. To move your data to another device: open **Manage**, click **⬆ Export**, then on the new device click **⬇ Import** and choose Merge or Replace.
+
+---
+
+## Tech stack
+
+- **Vanilla HTML, CSS, and JavaScript** — no frameworks, no build step
+- **face-api.js** — in-browser face detection and recognition using pre-trained neural network weights
+- **localStorage** — all data persists locally in the browser with no server or account required
+- **CSS custom properties** — powers the light/dark theme switch and the frosted glass surfaces throughout the UI

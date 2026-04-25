@@ -222,6 +222,30 @@ body {
   border-color: var(--accent-color);
 }
 
+.btn-pill {
+  background: var(--card-bg);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid var(--input-border);
+  border-radius: 30px;
+  height: 44px;
+  padding: 0 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-color);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+.btn-pill:hover {
+  background: var(--btn-hover);
+  border-color: var(--input-border);
+  box-shadow: none;
+}
+
 #status-pill-container {
   position: absolute;
   bottom: 40px;
@@ -268,7 +292,7 @@ button {
   border: 1px solid rgba(230, 126, 34, 0.5);
   color: var(--text-color);
   padding: 12px 24px;
-  border-radius: 30px;
+  border-radius: 10px;
   font-family: 'DM Sans', sans-serif;
   font-size: 16px;
   font-weight: 500;
@@ -394,7 +418,11 @@ button:hover {
   transition: background 0.2s;
   z-index: 5;
 }
-.btn-tts:hover { background: var(--btn-hover); }
+.btn-tts:hover {
+  background: var(--btn-hover);
+  border-color: var(--input-border);
+  box-shadow: none;
+}
 
 .unknown-card {
   text-align: center;
@@ -470,7 +498,7 @@ button:hover {
 
 .management-controls {
   flex-shrink: 0;
-  padding: 0 24px 12px 24px;
+  padding: 8px 24px 12px 24px;
   border-bottom: 1px solid var(--input-border);
 }
 
@@ -552,7 +580,6 @@ body.light-mode .form-group select {
   font-size: 14px;
   font-weight: 700;
   border-radius: 10px;
-  margin-top: 10px;
 }
 .btn-primary:hover {
   background: #d35400;
@@ -571,6 +598,8 @@ body.light-mode .form-group select {
 }
 .btn-outline:hover {
   background: var(--btn-hover);
+  border-color: var(--input-border);
+  box-shadow: none;
 }
 
 /* List Groups & Items */
@@ -656,6 +685,7 @@ body.light-mode .form-group select {
 .btn-icon:hover {
   background: var(--btn-hover);
   border-color: var(--text-color);
+  box-shadow: none;
 }
 .btn-icon.danger {
   background: rgba(220, 53, 69, 0.05);
@@ -665,6 +695,7 @@ body.light-mode .form-group select {
 .btn-icon.danger:hover {
   background: rgba(220, 53, 69, 0.2);
   border-color: #dc3545;
+  box-shadow: none;
 }
 
 /* Custom Scrollbar */
@@ -714,7 +745,7 @@ body.light-mode .form-group select {
   background: var(--panel-bg);
   border: 1px solid var(--input-border);
   border-radius: 24px;
-  padding: 40px;
+  padding: 32px;
   width: 420px;
   max-width: 90%;
   position: relative;
@@ -907,4 +938,10 @@ button:active:not(.close-btn):not(.btn-tts):not(.btn-icon) {
   font-size: 12px;
   color: var(--text-muted);
   opacity: 0.75;
+}
+
+/* Shift toasts left when the side panel is open so they don't overlap */
+#side-panel.open ~ #toast-container {
+  right: calc(340px + 16px);
+  transition: right 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
 }

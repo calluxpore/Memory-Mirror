@@ -493,7 +493,7 @@ function updateUnknownCard(faceCX, faceCY, box, index) {
     el.className = 'memory-card unknown-card visible';
     el.innerHTML = `
       <h2>Unknown Person</h2>
-      <button onclick="openManualEnrollment()" ontouchend="openManualEnrollment(); event.preventDefault();" style=";">Add to Memory</button>
+      <button class="btn-primary" onclick="openManualEnrollment()" ontouchend="openManualEnrollment(); event.preventDefault();">Add to Memory</button>
     `;
     uiLayer.appendChild(el);
     card = { el, width: 260, height: 160 };
@@ -577,6 +577,22 @@ function updateRelationshipDropdown() {
   }
 }
 
+window.backToManageList = function() {
+  manageMemories();
+}
+
+function setPhotoUploadContext(mode) {
+  const label = document.getElementById('photo-upload-label');
+  const hint = document.getElementById('photo-upload-hint');
+  if (mode === 'edit') {
+    label.textContent = 'Update Photo (Optional)';
+    hint.textContent = 'Upload a new photo to update this person\'s profile picture.';
+  } else {
+    label.textContent = 'Enroll via Photo (Optional)';
+    hint.textContent = 'Uploading a clear photo overrides live camera scanning.';
+  }
+}
+
 window.openManualEnrollment = function() {
   isEnrollmentMode = false;
   enrollmentSamples = [];
@@ -590,7 +606,9 @@ window.openManualEnrollment = function() {
   document.getElementById('panel-title').innerText = "Add to Memory";
   document.getElementById('enrollment-form-container').style.display = 'block';
   document.getElementById('management-list-container').style.display = 'none';
-  
+  document.getElementById('back-to-list-btn').style.display = 'block';
+  setPhotoUploadContext('add');
+
   document.getElementById('enroll-id').value = '';
   document.getElementById('enroll-name').value = '';
   document.getElementById('enroll-relationship').value = 'Family';
@@ -611,7 +629,9 @@ window.showEnrollmentForm = function() {
   document.getElementById('panel-title').innerText = "Add to Memory";
   document.getElementById('enrollment-form-container').style.display = 'block';
   document.getElementById('management-list-container').style.display = 'none';
+  document.getElementById('back-to-list-btn').style.display = 'none';
   document.getElementById('rescan-group').style.display = 'none';
+  setPhotoUploadContext('add');
 }
 
 window.editMemory = function(id) {
@@ -632,9 +652,12 @@ window.editMemory = function(id) {
   document.getElementById('enrollment-form-container').style.display = 'block';
   document.getElementById('management-list-container').style.display = 'none';
   
+  document.getElementById('back-to-list-btn').style.display = 'block';
+  setPhotoUploadContext('edit');
+
   document.getElementById('enroll-id').value = person.id;
   document.getElementById('enroll-name').value = person.name;
-  
+
   const select = document.getElementById('enroll-relationship');
   let optionExists = false;
   for(let i=0; i<select.options.length; i++) {
@@ -1043,6 +1066,9 @@ window.enrollFromDrop = function() {
   document.getElementById('enrollment-form-container').style.display = 'block';
   document.getElementById('management-list-container').style.display = 'none';
   
+  document.getElementById('back-to-list-btn').style.display = 'none';
+  setPhotoUploadContext('add');
+
   document.getElementById('enroll-id').value = '';
   document.getElementById('enroll-name').value = '';
   document.getElementById('enroll-relationship').value = 'Family';
@@ -1051,7 +1077,7 @@ window.enrollFromDrop = function() {
   document.getElementById('enroll-prompt').value = '';
   document.getElementById('enroll-note').value = '';
   document.getElementById('rescan-group').style.display = 'none';
-  
+
   const imgUrl = URL.createObjectURL(window._pendingDropFile);
   const imgEl = document.getElementById('photo-preview');
   const previewContainer = document.getElementById('photo-preview-container');
